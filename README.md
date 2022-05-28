@@ -1,2 +1,2 @@
-# gosearch
-A search engine implemented by go
+# go-search
+A search engine implemented by golang.
