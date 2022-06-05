@@ -8,10 +8,10 @@ import (
 var DB *leveldb.DB
 
 func InitLevelDB() error {
-	DB, err := leveldb.OpenFile("clients/leveldb", nil)
-	defer DB.Close()
+	var err error
+	DB, err = leveldb.OpenFile("leveldb", nil)
 	if err != nil {
-		log.Printf("open db failed, err:%v\n", err)
+		log.Println(err)
 		return err
 	}
 	return nil
