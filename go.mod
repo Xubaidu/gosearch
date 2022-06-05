@@ -2,4 +2,8 @@ module go-search
 
 go 1.17
 
-require github.com/yanyiwu/gojieba v1.1.2 // indirect
+require (
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
+	github.com/yanyiwu/gojieba v1.1.2 // indirect
+)
