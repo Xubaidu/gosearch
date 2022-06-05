@@ -15,9 +15,18 @@ func TestInitLevelDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = InitLevelDB()
-			_ = DB.Put([]byte("key"), []byte("value"), nil)
-			data, _ := DB.Get([]byte("key"), nil)
+			err := InitLevelDB()
+			if err != nil {
+				fmt.Println(err)
+			}
+			err = DB.Put([]byte("key"), []byte("value"), nil)
+			if err != nil {
+				fmt.Println(err)
+			}
+			data, err := DB.Get([]byte("key"), nil)
+			if err != nil {
+				fmt.Println(err)
+			}
 			fmt.Println(string(data))
 		})
 	}
