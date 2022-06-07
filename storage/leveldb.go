@@ -8,11 +8,14 @@ import (
 	"log"
 )
 
-var DB *leveldb.DB
+type LeveldbStorage struct {
+	db   *leveldb.DB
+	path string
+}
 
-func InitLevelDB() error {
+func (s *LeveldbStorage) InitLevelDB() error {
 	var err error
-	DB, err = leveldb.OpenFile("leveldb", nil)
+	s.db, err = leveldb.OpenFile("leveldb", nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -54,14 +57,23 @@ func Decoder(data []byte, v interface{}) error {
 	return nil
 }
 
-func Set(key string, value interface{}) error {
+func (s *LeveldbStorage) Total() int64 {
+	var count int64
+	iter := s.db.NewIterator(nil, nil)
+	for iter.Next() {
+		count++
+	}
+	iter.Release()
+	return count
+}
+func (s *LeveldbStorage) Set(key string, value interface{}) error {
 	k := []byte(key)
 	v, err := Encoder(value)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	err = DB.Put(k, v, nil)
+	err = s.db.Put(k, v, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -69,9 +81,9 @@ func Set(key string, value interface{}) error {
 	return nil
 }
 
-func Get(key string, value interface{}) error {
+func (s *LeveldbStorage) Get(key string, value interface{}) error {
 	k := []byte(key)
-	buffer, err := DB.Get(k, nil)
+	buffer, err := s.db.Get(k, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -80,7 +92,7 @@ func Get(key string, value interface{}) error {
 	return nil
 }
 
-func Delete(key string) error {
+func (s *LeveldbStorage) Delete(key string) error {
 	k := []byte(key)
-	return DB.Delete(k, nil)
+	return s.db.Delete(k, nil)
 }
