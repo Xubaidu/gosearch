@@ -6,7 +6,7 @@ import (
 
 type Jieba = gojieba.Jieba
 
-func tokenizer(s string) []string {
+func Tokenizer(s string) []string {
 	Jb := gojieba.NewJieba()
 	defer Jb.Free()
 	words := Jb.CutForSearch(s, true)
