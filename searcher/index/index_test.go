@@ -2,14 +2,12 @@ package index
 
 import (
 	"fmt"
-	"go-search/storage"
-	"log"
 	"testing"
 )
 
 func TestCalc(t *testing.T) {
 	type args struct {
-		tokens []string
+		doc string
 	}
 	tests := []struct {
 		name string
@@ -18,27 +16,22 @@ func TestCalc(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				tokens: []string{"我", "来", "到", "清华", "大学"},
+				doc: "我来到清华大学",
 			},
 		},
 	}
-	err := storage.InitLevelDB()
-	if err != nil {
-		log.Println(err)
-	}
+	InitDB()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			docs := []string{
 				"我来到清华大学",
 				"你来到清华大学",
 			}
-			for _, doc := range docs {
-				err := InsertRevIndex(doc)
-				if err != nil {
-					t.Error(err)
-				}
+			err := BuildRevIndex(docs)
+			if err != nil {
+				t.Error(err)
 			}
-			indexes, err := Calc(tt.args.tokens)
+			indexes, err := Calc(tt.args.doc)
 			if err != nil {
 				t.Error(err)
 			}
