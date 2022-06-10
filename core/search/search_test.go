@@ -1,11 +1,13 @@
-package index
+package search
 
 import (
 	"fmt"
+	"go-search/core/index"
+	"go-search/core/storage"
 	"testing"
 )
 
-func TestCalc(t *testing.T) {
+func TestSearch(t *testing.T) {
 	type args struct {
 		doc string
 	}
@@ -20,24 +22,22 @@ func TestCalc(t *testing.T) {
 			},
 		},
 	}
-	InitDB()
+	storage.InitDB()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			docs := []string{
 				"我来到清华大学",
 				"你来到清华大学",
 			}
-			err := BuildRevIndex(docs)
+			err := index.BuildRevIndex(docs)
 			if err != nil {
 				t.Error(err)
 			}
-			indexes, err := Calc(tt.args.doc)
+			ans := Search(tt.args.doc)
 			if err != nil {
 				t.Error(err)
 			}
-			for _, index := range indexes {
-				fmt.Println(*index)
-			}
+			fmt.Println(ans)
 		})
 	}
 }

@@ -2,30 +2,27 @@ package index
 
 import (
 	"errors"
-	"go-search/searcher/word"
-	"go-search/storage"
+	"go-search/core/model"
+	"go-search/core/storage"
+	"go-search/core/word"
 	"log"
+	"strconv"
 )
 
-var DocDB *storage.LeveldbStorage
-var RevIndexDB *storage.LeveldbStorage
+type Index = model.Index
 
-type Index struct {
-	DocList []int64
-	Count   int64
-	Token   string
-}
-
-func InitDB() {
-	DocDB = storage.NewLevelDB("doc_db")
-	RevIndexDB = storage.NewLevelDB("rev_index_db")
-}
+var ForwardDocDB = storage.ForwardDocDB
+var RevIndexDB = storage.RevIndexDB
+var RevDocDB = storage.RevDocDB
 
 func InsertRevIndex(doc string) error {
-	if err := InsertDoc(doc); err != nil {
+	if err := InsertRevDoc(doc); err != nil {
 		return err
 	}
 	docID := GetDocNum()
+	if err := InsertForwardDoc(docID, doc); err != nil {
+		return err
+	}
 	tokens := word.Tokenizer(doc)
 	for _, token := range tokens {
 		var index Index
@@ -40,7 +37,6 @@ func InsertRevIndex(doc string) error {
 		} else {
 			index.DocList = []int64{docID}
 			index.Count = 1
-			index.Token = token
 		}
 		err := RevIndexDB.Set(token, index)
 		if err != nil {
@@ -62,27 +58,25 @@ func BuildRevIndex(docs []string) error {
 	return nil
 }
 
-func Calc(doc string) ([]*Index, error) {
-	var indexes []*Index
-	tokens := word.Tokenizer(doc)
-	for _, token := range tokens {
-		var index Index
-		if err := RevIndexDB.Get(token, &index); err == nil {
-			indexes = append(indexes, &index)
-		}
-	}
-	return indexes, nil
-}
-
-func InsertDoc(doc string) error {
-	if has, _ := DocDB.Has(doc); has {
+func InsertRevDoc(doc string) error {
+	if has, _ := RevDocDB.Has(doc); has {
 		err := errors.New("insert doc failed, doc already exists")
 		log.Println(err)
 		return err
 	}
-	return DocDB.Set(doc, GetDocNum())
+	return RevDocDB.Set(doc, GetDocNum())
+}
+
+func InsertForwardDoc(docID int64, doc string) error {
+	key := strconv.FormatInt(docID, 10)
+	if has, _ := ForwardDocDB.Has(key); has {
+		err := errors.New("insert doc failed, doc already exists")
+		log.Println(err)
+		return err
+	}
+	return ForwardDocDB.Set(key, doc)
 }
 
 func GetDocNum() int64 {
-	return DocDB.Total()
+	return RevDocDB.Total()
 }

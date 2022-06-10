@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
+	"go-search/core/model"
 	"go-search/utils"
 	"log"
 )
@@ -62,6 +63,21 @@ func (s *LeveldbStorage) Total() int64 {
 	iter.Release()
 	return count
 }
+
+func (s *LeveldbStorage) TotalToken() int64 {
+	s.Open()
+	var count int64
+	iter := s.db.NewIterator(nil, nil)
+	for iter.Next() {
+		var i model.Index
+		if err := utils.Decode(iter.Value(), i); err == nil {
+			count += int64(len(i.DocList))
+		}
+	}
+	iter.Release()
+	return count
+}
+
 func (s *LeveldbStorage) Set(key string, value interface{}) error {
 	s.Open()
 	v, err := utils.Encode(value)
