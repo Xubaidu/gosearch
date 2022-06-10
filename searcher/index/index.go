@@ -7,37 +7,42 @@ import (
 	"log"
 )
 
+var DocDB *storage.LeveldbStorage
+var RevIndexDB *storage.LeveldbStorage
+
 type Index struct {
 	DocList []int64
 	Count   int64
 	Token   string
 }
 
+func InitDB() {
+	DocDB = storage.NewLevelDB("doc_db")
+	RevIndexDB = storage.NewLevelDB("rev_index_db")
+}
+
 func InsertRevIndex(doc string) error {
-	var s = &storage.LeveldbStorage{}
-	// FIXME: add storage.GetDoc(doc) function
-	if _, err := Lestorage.GetDoc(doc); err == nil {
-		err = errors.New("doc already exists")
-		log.Println(err)
+	if err := InsertDoc(doc); err != nil {
 		return err
 	}
-	// FIXME: add GetDocNum() function
-	docID := Lestorage.GetDocNum(doc) + 1
+	docID := GetDocNum()
 	tokens := word.Tokenizer(doc)
 	for _, token := range tokens {
 		var index Index
-		if err := s.Get(token, &index); err != nil {
-			index.DocList = []int64{docID}
-			index.Count = 1
-		} else {
+		if has, _ := RevIndexDB.Has(token); has {
+			err := RevIndexDB.Get(token, &index)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
 			index.DocList = append(index.DocList, docID)
 			index.Count++
+		} else {
+			index.DocList = []int64{docID}
+			index.Count = 1
+			index.Token = token
 		}
-		err := s.Set(token, &Index{
-			DocList: append(index.DocList, docID),
-			Count:   index.Count + 1,
-			Token:   token,
-		})
+		err := RevIndexDB.Set(token, index)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -57,16 +62,27 @@ func BuildRevIndex(docs []string) error {
 	return nil
 }
 
-func Calc(tokens []string) ([]*Index, error) {
+func Calc(doc string) ([]*Index, error) {
 	var indexes []*Index
+	tokens := word.Tokenizer(doc)
 	for _, token := range tokens {
 		var index Index
-		err := s.Get(token, &index)
-		if err != nil {
-			log.Println(err)
-			return nil, err
+		if err := RevIndexDB.Get(token, &index); err == nil {
+			indexes = append(indexes, &index)
 		}
-		indexes = append(indexes, &index)
 	}
 	return indexes, nil
+}
+
+func InsertDoc(doc string) error {
+	if has, _ := DocDB.Has(doc); has {
+		err := errors.New("insert doc failed, doc already exists")
+		log.Println(err)
+		return err
+	}
+	return DocDB.Set(doc, GetDocNum())
+}
+
+func GetDocNum() int64 {
+	return DocDB.Total()
 }

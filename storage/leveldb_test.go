@@ -13,13 +13,16 @@ func TestInitLevelDB(t *testing.T) {
 			name: "test 1",
 		},
 	}
-	var s = &LeveldbStorage{}
+	s := NewLevelDB("test")
+	s.Open()
+	defer s.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = s.InitLevelDB()
-			_ = s.db.Put([]byte("key"), []byte("value"), nil)
-			data, _ := s.db.Get([]byte("key"), nil)
-			fmt.Println(string(data))
+			_ = s.Set("key", "value")
+			var data string
+			_ = s.Get("key", &data)
+			fmt.Println(data, data == "value")
+			fmt.Println(s.Total())
 		})
 	}
 }
