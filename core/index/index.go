@@ -1,88 +1,78 @@
 package index
 
 import (
-	"errors"
 	"go-search/core/model"
 	"go-search/core/storage"
-	"go-search/core/word"
-	"log"
-	"strconv"
+	"go-search/utils"
+	"sync"
 )
 
-type Index = model.Index
+type TokenIndex = model.TokenIndex
 
-var ForwardDocDB *storage.LeveldbStorage
-var RevIndexDB *storage.LeveldbStorage
-var RevDocDB *storage.LeveldbStorage
+// RevTokenDB maps token to TokenIndex. It is a reverse TokenIndex
+var RevTokenDB *storage.LeveldbStorage
+
+var TokenNum int64
 
 func init() {
-	ForwardDocDB = storage.ForwardDocDB
-	RevIndexDB = storage.RevIndexDB
-	RevDocDB = storage.RevDocDB
+	RevTokenDB = storage.RevTokenDB
+	TokenNum = TotalToken()
 }
 
-func InsertRevIndex(doc string) error {
-	if err := InsertRevDoc(doc); err != nil {
-		return err
-	}
-	docID := GetDocNum()
-	if err := InsertForwardDoc(docID, doc); err != nil {
-		return err
-	}
-	tokens := word.Tokenizer(doc)
+func InsertRevTokenIndex(doc string, docID int64) error {
+	tokens := utils.Tokenizer(doc)
+	defer func() {
+		mut := sync.Mutex{}
+		mut.Lock()
+		defer mut.Unlock()
+		TokenNum += int64(len(tokens))
+	}()
 	for _, token := range tokens {
-		var index Index
-		if has, _ := RevIndexDB.Has(token); has {
-			err := RevIndexDB.Get(token, &index)
+		var i TokenIndex
+		if has := RevTokenDB.Has(token); has {
+			err := RevTokenDB.Get(token, &i)
 			if err != nil {
-				log.Println(err)
 				return err
 			}
-			index.DocList = append(index.DocList, docID)
-			index.Count++
+			// TODO: ensure thread safety
+			i.DocList = append(i.DocList, docID)
+			i.Count++
 		} else {
-			index.DocList = []int64{docID}
-			index.Count = 1
+			i.DocList = []int64{docID}
+			i.Count = 1
 		}
-		err := RevIndexDB.Set(token, index)
-		if err != nil {
-			log.Println(err)
+		if err := RevTokenDB.Set(token, i); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func BuildRevIndex(docs []string) error {
+func BuildRevTokenIndex(docs []string) error {
 	for _, doc := range docs {
-		err := InsertRevIndex(doc)
-		if err != nil {
-			log.Println(err)
+		if err := InsertRevDocTokenIndex(doc); err != nil {
+			return err
+		}
+		if err := InsertForwardDocTokenIndex(doc); err != nil {
+			return err
+		}
+		if err := InsertRevTokenIndex(doc, DocNum); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func InsertRevDoc(doc string) error {
-	if has, _ := RevDocDB.Has(doc); has {
-		err := errors.New("insert doc failed, doc already exists")
-		log.Println(err)
-		return err
+func TotalToken() int64 {
+	RevTokenDB.Open()
+	var count int64
+	iter := RevTokenDB.DB.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		var i model.TokenIndex
+		if err := utils.Decode(iter.Value(), &i); err == nil {
+			count += int64(len(i.DocList))
+		}
 	}
-	return RevDocDB.Set(doc, GetDocNum())
-}
-
-func InsertForwardDoc(docID int64, doc string) error {
-	key := strconv.FormatInt(docID, 10)
-	if has, _ := ForwardDocDB.Has(key); has {
-		err := errors.New("insert doc failed, doc already exists")
-		log.Println(err)
-		return err
-	}
-	return ForwardDocDB.Set(key, doc)
-}
-
-func GetDocNum() int64 {
-	return RevDocDB.Total()
+	return count
 }

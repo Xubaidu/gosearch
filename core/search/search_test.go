@@ -2,7 +2,6 @@ package search
 
 import (
 	"fmt"
-	"go-search/core/index"
 	"testing"
 )
 
@@ -17,24 +16,13 @@ func TestSearch(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				doc: "我来到清华大学",
+				doc: "中国最好的大学",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			docs := []string{
-				"我来到清华大学",
-				"你来到清华大学",
-			}
-			err := index.BuildRevIndex(docs)
-			if err != nil {
-				t.Error(err)
-			}
 			ans := Search(tt.args.doc)
-			if err != nil {
-				t.Error(err)
-			}
 			fmt.Println(ans)
 		})
 	}

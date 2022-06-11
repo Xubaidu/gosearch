@@ -2,38 +2,19 @@ package storage
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
-	"go-search/core/model"
+	"github.com/syndtr/goleveldb/leveldb/filter"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"go-search/utils"
 	"log"
 )
 
 type LeveldbStorage struct {
-	db     *leveldb.DB
+	DB     *leveldb.DB
 	path   string
 	closed bool
 }
 
-func OpenDB(path string) (*leveldb.DB, error) {
-	// FIXME: add bloom filter to reduce the time of disk IO
-	db, err := leveldb.OpenFile(path, nil)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	return db, nil
-}
-
-func (s *LeveldbStorage) Open() {
-	// FIXME: no exception. is it ok?
-	if !s.closed {
-		log.Println("db is already opened")
-		return
-	}
-	s.db, _ = OpenDB(s.path)
-	s.closed = false
-}
-
-func NewLevelDB(path string) *LeveldbStorage {
+func NewLeveldbStorage(path string) *LeveldbStorage {
 	s := &LeveldbStorage{
 		path:   path,
 		closed: true,
@@ -41,40 +22,40 @@ func NewLevelDB(path string) *LeveldbStorage {
 	return s
 }
 
+func OpenDB(path string) (*leveldb.DB, error) {
+	// 使用布隆过滤器，查询的时候可以先判断 key 是否存在，从而减少磁盘 IO 的次数
+	o := &opt.Options{
+		Filter: filter.NewBloomFilter(10),
+	}
+	db, err := leveldb.OpenFile(path, o)
+	return db, err
+}
+
+func (s *LeveldbStorage) Open() {
+	if !s.closed {
+		return
+	}
+	s.DB, _ = OpenDB(s.path)
+	s.closed = false
+	return
+}
+
 func (s *LeveldbStorage) Close() {
 	if s.closed {
-		log.Println("db is already closed")
 		return
 	}
-	if err := s.db.Close(); err != nil {
-		log.Println(err)
-		return
-	}
+	_ = s.DB.Close()
 	s.closed = true
 }
 
 func (s *LeveldbStorage) Total() int64 {
 	s.Open()
 	var count int64
-	iter := s.db.NewIterator(nil, nil)
+	iter := s.DB.NewIterator(nil, nil)
+	defer iter.Release()
 	for iter.Next() {
 		count++
 	}
-	iter.Release()
-	return count
-}
-
-func (s *LeveldbStorage) TotalToken() int64 {
-	s.Open()
-	var count int64
-	iter := s.db.NewIterator(nil, nil)
-	for iter.Next() {
-		var i model.Index
-		if err := utils.Decode(iter.Value(), &i); err == nil {
-			count += int64(len(i.DocList))
-		}
-	}
-	iter.Release()
 	return count
 }
 
@@ -85,9 +66,8 @@ func (s *LeveldbStorage) Set(key string, value interface{}) error {
 		log.Println(err)
 		return err
 	}
-	err = s.db.Put([]byte(key), v, nil)
+	err = s.DB.Put([]byte(key), v, nil)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	return nil
@@ -95,27 +75,21 @@ func (s *LeveldbStorage) Set(key string, value interface{}) error {
 
 func (s *LeveldbStorage) Get(key string, value interface{}) error {
 	s.Open()
-	buffer, err := s.db.Get([]byte(key), nil)
+	buffer, err := s.DB.Get([]byte(key), nil)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	err = utils.Decode(buffer, value)
-	return nil
+	return err
 }
 
 func (s *LeveldbStorage) Delete(key string) error {
 	s.Open()
-	return s.db.Delete([]byte(key), nil)
+	return s.DB.Delete([]byte(key), nil)
 }
 
-func (s *LeveldbStorage) Has(key string) (bool, error) {
+func (s *LeveldbStorage) Has(key string) bool {
 	s.Open()
-	has, err := s.db.Has([]byte(key), nil)
-	if err != nil {
-		log.Println(err)
-		// FIXME: error handling is not good. should we panic?
-		return false, err
-	}
-	return has, nil
+	has, _ := s.DB.Has([]byte(key), nil)
+	return has
 }

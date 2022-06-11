@@ -1,8 +1,8 @@
 package model
 
 type Term struct {
-	Index *Index
-	Score float64
+	TokenIndex *TokenIndex
+	Score      float64
 }
 
 // Terms is a small heap
