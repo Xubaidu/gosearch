@@ -70,7 +70,7 @@ func (s *LeveldbStorage) TotalToken() int64 {
 	iter := s.db.NewIterator(nil, nil)
 	for iter.Next() {
 		var i model.Index
-		if err := utils.Decode(iter.Value(), i); err == nil {
+		if err := utils.Decode(iter.Value(), &i); err == nil {
 			count += int64(len(i.DocList))
 		}
 	}

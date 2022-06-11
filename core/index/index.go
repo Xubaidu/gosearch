@@ -11,9 +11,15 @@ import (
 
 type Index = model.Index
 
-var ForwardDocDB = storage.ForwardDocDB
-var RevIndexDB = storage.RevIndexDB
-var RevDocDB = storage.RevDocDB
+var ForwardDocDB *storage.LeveldbStorage
+var RevIndexDB *storage.LeveldbStorage
+var RevDocDB *storage.LeveldbStorage
+
+func init() {
+	ForwardDocDB = storage.ForwardDocDB
+	RevIndexDB = storage.RevIndexDB
+	RevDocDB = storage.RevDocDB
+}
 
 func InsertRevIndex(doc string) error {
 	if err := InsertRevDoc(doc); err != nil {

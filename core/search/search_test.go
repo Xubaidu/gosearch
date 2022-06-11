@@ -3,7 +3,6 @@ package search
 import (
 	"fmt"
 	"go-search/core/index"
-	"go-search/core/storage"
 	"testing"
 )
 
@@ -22,7 +21,6 @@ func TestSearch(t *testing.T) {
 			},
 		},
 	}
-	storage.InitDB()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			docs := []string{
