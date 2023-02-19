@@ -15,7 +15,7 @@ Compulsory TODOs are as followed.
 
 - [ ] methods: `put`, `get`, `delete` and `total`(calculate total entries).
 - [ ] members: `db` object, `filePath`(identify each db)
-- [ ] methods: `newLeveldb`. We do not have a constructor in go, so we need to encapsulate a function to new an object.
+- [ ] methods: `NewLeveldbStorage`. We do not have a constructor in go, so we need to encapsulate a function to new an object.
 
 Other functions are optional.
 

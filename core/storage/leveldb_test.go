@@ -13,7 +13,7 @@ func TestInitLevelDB(t *testing.T) {
 			name: "test 1",
 		},
 	}
-	s := NewLevelDB("test")
+	s := NewLeveldbStorage("test")
 	s.Open()
 	defer s.Close()
 	for _, tt := range tests {

@@ -1,4 +1,4 @@
-package word
+package utils
 
 import (
 	"github.com/yanyiwu/gojieba"
